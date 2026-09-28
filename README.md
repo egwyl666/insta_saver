@@ -46,8 +46,23 @@ Run manually: `.venv/bin/python -m bot.main` (Windows: `.venv\Scripts\python -m 
 
 ffmpeg is needed by yt-dlp to merge separate video/audio tracks (reels, Twitter videos).
 
-Deploy on a Pi: `bash deploy/install.sh` — fills in REPLACE_USER/REPLACE_HOME,
-installs the systemd units (bot, web admin) and enables weekly updates of yt-dlp and gallery-dl.
+## Autostart (systemd)
+
+```bash
+cd ~/dl_bot && bash deploy/install.sh
+```
+
+Installs and starts the bot and the web admin as services that come back after a reboot
+or a crash, and enables a weekly update of yt-dlp and gallery-dl. It stops copies started
+by hand first (two bots with one token fight over updates). Re-run it after `git pull`
+to restart the services on the new code.
+
+```bash
+systemctl status dl_bot dl_bot_web        # are they running
+journalctl -u dl_bot -f                   # bot log (web: -u dl_bot_web)
+sudo systemctl restart dl_bot dl_bot_web  # restart
+sudo systemctl disable --now dl_bot dl_bot_web dl_bot_update.timer   # remove from autostart
+```
 
 ## Web admin
 

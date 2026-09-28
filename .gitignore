@@ -6,6 +6,7 @@ data/*.db
 data/*.db-*
 data/cookies/*
 data/backups/*
+data/cache/
 tmp/*
 !data/cookies/.gitkeep
 !data/backups/.gitkeep

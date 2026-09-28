@@ -4,8 +4,8 @@ Description=dl_bot - update yt-dlp and gallery-dl
 [Service]
 Type=oneshot
 User=REPLACE_USER
-WorkingDirectory=REPLACE_HOME/dl_bot
-ExecStart=REPLACE_HOME/dl_bot/.venv/bin/pip install -q --upgrade yt-dlp gallery-dl
+WorkingDirectory=REPLACE_DIR
+ExecStart=REPLACE_DIR/.venv/bin/pip install -q --upgrade yt-dlp gallery-dl
 # Рестарт бота не нужен: утилиты запускаются отдельным процессом на каждую
 # загрузку и сразу подхватывают новую версию. (И от обычного юзера
 # systemctl restart всё равно не сработал бы.)

@@ -6,18 +6,20 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=REPLACE_USER
-WorkingDirectory=REPLACE_HOME/dl_bot
+WorkingDirectory=REPLACE_DIR
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=REPLACE_HOME/dl_bot/.venv/bin/python -m web.app
+# Домашняя папка ниже только на чтение, а gallery-dl/yt-dlp пишут кэш в ~/.cache
+Environment="XDG_CACHE_HOME=REPLACE_DIR/data/cache"
+ExecStart=REPLACE_DIR/.venv/bin/python -m web.app
 Restart=always
 RestartSec=10
 
-# Немного изоляции: боту не нужен доступ никуда, кроме своей папки
+# Немного изоляции: писать можно только в папку проекта
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths=REPLACE_HOME/dl_bot
+ReadWritePaths=REPLACE_DIR
 
 [Install]
 WantedBy=multi-user.target
