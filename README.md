@@ -1,23 +1,23 @@
-# dl_bot — бот для скачивания из Instagram и Twitter/X
+# dl_bot — Telegram bot for downloading from Instagram and Twitter/X
 
-Whitelist, пул левых инста-аккаунтов, кэш file_id, админка на 8082.
+Whitelist, a pool of throwaway Instagram accounts, file_id cache, admin panel on port 8082.
 
-Готово: **этап 1** (база и слой хранения) и **этап 2** (ядро бота).
-Впереди: очередь ожидания подписки (этап 3) и админка (этап 4).
+Done: **stage 1** (database and storage layer) and **stage 2** (bot core).
+Coming up: waiting queue for follow requests (stage 3) and the admin panel (stage 4).
 
-## Что уже умеет
+## Features
 
-- Ловит ссылки инсты и твиттера в любом сообщении, в том числе несколько сразу
-- Понимает зеркала (vxtwitter, ddinstagram и прочие) и чистит мусорные параметры
-- Инста: посты, рилсы, сторис, хайлайты — через gallery-dl, запасной вариант yt-dlp
-- Твиттер: видео через yt-dlp, картинки через gallery-dl, без логина
-- Карусели уходят альбомом, разбивка по 10 файлов (лимит телеги)
-- Кэш: повтор той же ссылки отдаётся мгновенно по `file_id`, без скачивания
-- Пул аккаунтов: нагрузка размазывается, cooldown, протухший акк сам выбывает и задача уходит на следующий
-- Алерты владельцу в личку, с троттлингом
-- `/queue`, `/cancel`, админские `/allow`, `/ban`, `/stats`
+- Picks up Instagram and Twitter links in any message, including several at once
+- Understands mirrors (vxtwitter, ddinstagram, etc.) and strips junk parameters
+- Instagram: posts, reels, stories, highlights — via gallery-dl, with yt-dlp as a fallback
+- Twitter: videos via yt-dlp, images via gallery-dl, no login required
+- Carousels are sent as albums, split into chunks of 10 files (Telegram's limit)
+- Cache: a repeated link is served instantly by `file_id`, without downloading again
+- Account pool: load is spread across accounts, with cooldowns; an expired account drops out on its own and the task moves to the next one
+- Alerts to the owner via DM, with throttling
+- `/queue`, `/cancel`, admin commands `/allow`, `/ban`, `/stats`
 
-## Установка
+## Installation
 
 ```bash
 cd /home/pios/dl_bot
@@ -26,19 +26,19 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env && chmod 600 .env
-python -m db.init_db --key            # ключ -> COOKIES_KEY в .env
-# в .env также вписать BOT_TOKEN и ADMIN_TG_ID
-python -m db.init_db --admin <твой_tg_id> --username simon
+python -m db.init_db --key            # key -> COOKIES_KEY in .env
+# also set BOT_TOKEN and ADMIN_TG_ID in .env
+python -m db.init_db --admin <your_tg_id> --username simon
 ```
 
-Запуск вручную: `python -m bot.main`
+Run manually: `python -m bot.main`
 
-Деплой на Pi: `bash deploy/install.sh` — подставит REPLACE_USER/REPLACE_HOME,
-поставит юниты, включит еженедельное обновление yt-dlp и gallery-dl.
+Deploy on a Pi: `bash deploy/install.sh` — fills in REPLACE_USER/REPLACE_HOME,
+installs the systemd units and enables weekly updates of yt-dlp and gallery-dl.
 
 ## Cookies
 
-Пока админки нет, аккаунт добавляется руками:
+Until the admin panel exists, accounts are added by hand:
 
 ```python
 python - <<'PY'
@@ -49,30 +49,30 @@ print(storage.add_account("acc_one", rel))
 PY
 ```
 
-Экспортировать `cookies.txt` (формат Netscape) расширением из браузера,
-залогиненного **левым** аккаунтом. Не основным.
+Export `cookies.txt` (Netscape format) with a browser extension from a browser
+logged in to a **throwaway** account. Not your main one.
 
-## Проверка
+## Testing
 
 ```bash
-python smoke_test.py        # 45 проверок: база, ссылки, шифрование
-python smoke_test_bot.py    # 36 проверок: ядро бота на фейковом телеграме
+python smoke_test.py        # 45 checks: database, links, encryption
+python smoke_test_bot.py    # 36 checks: bot core against a fake Telegram
 ```
 
-Оба гоняются на временной БД и без сети, боевую не трогают.
+Both run on a temporary database without network access and never touch the production one.
 
-## Файлы
+## Files
 
-| Файл | За что отвечает |
+| File | Responsibility |
 |---|---|
-| `db/schema.sql`, `db/storage.py` | схема и весь доступ к БД |
-| `common/urls.py` | нормализация ссылок, зеркала, тип медиа |
-| `accounts/crypto.py` | шифрование cookies |
-| `downloaders/base.py` | запуск утилит, классификация ошибок, сбор файлов |
-| `downloaders/instagram.py`, `twitter.py` | стратегии скачивания |
-| `bot/queue.py` | воркеры, полный цикл задачи, ретраи |
-| `bot/sender.py` | отправка, медиагруппы, кэш file_id |
-| `bot/handlers.py` | команды и приём ссылок |
-| `bot/texts.py` | все тексты в одном месте |
-| `bot/alerts.py` | алерты владельцу |
-| `deploy/` | systemd юниты + install.sh |
+| `db/schema.sql`, `db/storage.py` | schema and all database access |
+| `common/urls.py` | link normalization, mirrors, media type |
+| `accounts/crypto.py` | cookie encryption |
+| `downloaders/base.py` | running tools, error classification, collecting files |
+| `downloaders/instagram.py`, `twitter.py` | download strategies |
+| `bot/queue.py` | workers, full task lifecycle, retries |
+| `bot/sender.py` | sending, media groups, file_id cache |
+| `bot/handlers.py` | commands and link intake |
+| `bot/texts.py` | all bot texts in one place |
+| `bot/alerts.py` | owner alerts |
+| `deploy/` | systemd units + install.sh |
