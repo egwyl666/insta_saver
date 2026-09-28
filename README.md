@@ -46,19 +46,21 @@ installs the systemd units and enables weekly updates of yt-dlp and gallery-dl.
 
 ## Cookies
 
-Until the admin panel exists, accounts are added by hand:
+Instagram needs at least one account in the pool; Twitter works without one.
 
-```python
-python - <<'PY'
-from accounts import crypto
-from db import storage
-rel = crypto.store("acc_one", open("cookies.txt","rb").read())
-print(storage.add_account("acc_one", rel))
-PY
+1. In a desktop browser, log in to Instagram with a **throwaway** account (not your main one).
+2. Export cookies for instagram.com in Netscape format with an extension such as
+   "Get cookies.txt LOCALLY" (Chrome) or "cookies.txt" (Firefox).
+3. Copy the file to the bot machine and add it to the pool:
+
+```bash
+.venv/bin/python -m accounts.add cookies.txt --label acc_one
+.venv/bin/python -m accounts.add --list      # what is in the pool
+rm cookies.txt                               # the pool keeps an encrypted copy
 ```
 
-Export `cookies.txt` (Netscape format) with a browser extension from a browser
-logged in to a **throwaway** account. Not your main one.
+No bot restart needed. When an account drops out (the bot alerts you), export fresh
+cookies and run the same command with the same `--label` — it goes back into the pool.
 
 ## Testing
 

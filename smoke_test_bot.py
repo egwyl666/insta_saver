@@ -17,8 +17,11 @@ from telegram.error import TelegramError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-tmpdb = Path(tempfile.mkdtemp()) / "smoke2.db"
+_sandbox = Path(tempfile.mkdtemp())
+tmpdb = _sandbox / "smoke2.db"
 os.environ["DL_BOT_DB"] = str(tmpdb)
+os.environ["DL_BOT_DATA"] = str(_sandbox / "data")  # cookies и бэкапы — не боевые
+os.environ["DL_BOT_TMP"] = str(_sandbox / "tmp")
 
 from accounts.crypto import generate_key  # noqa: E402
 

@@ -6,10 +6,11 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
+# Переопределяются тестами, чтобы не трогать боевые cookies и бэкапы.
+DATA_DIR = Path(os.getenv("DL_BOT_DATA", BASE_DIR / "data"))
 COOKIES_DIR = DATA_DIR / "cookies"
 BACKUP_DIR = DATA_DIR / "backups"
-TMP_DIR = BASE_DIR / "tmp"
+TMP_DIR = Path(os.getenv("DL_BOT_TMP", BASE_DIR / "tmp"))
 DB_PATH = Path(os.getenv("DL_BOT_DB", DATA_DIR / "bot.db"))
 SCHEMA_PATH = BASE_DIR / "db" / "schema.sql"
 
