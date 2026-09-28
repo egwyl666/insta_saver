@@ -85,7 +85,8 @@ def setup() -> None:
     if missing:
         print(f"[!] заполни в .env: {', '.join(missing)} и запусти --setup ещё раз")
     else:
-        print("[ok] готово. Запуск: python -m bot.main")
+        # Полный путь к интерпретатору: голый "python" — системный, без зависимостей из .venv.
+        print(f"[ok] готово. Запуск: {sys.executable} -m bot.main")
 
 
 def main() -> None:
