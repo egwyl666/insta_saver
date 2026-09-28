@@ -19,19 +19,27 @@ Coming up: waiting queue for follow requests (stage 3) and the admin panel (stag
 
 ## Installation
 
-```bash
-cd /home/pios/dl_bot
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+One line — clones the repo into `~/dl_bot`, installs ffmpeg and the Python
+dependencies, then `--setup` creates `.env`, generates `COOKIES_KEY`, asks for
+the bot token and your Telegram ID, and creates the database.
 
-cp .env.example .env && chmod 600 .env
-python -m db.init_db --key            # key -> COOKIES_KEY in .env
-# also set BOT_TOKEN and ADMIN_TG_ID in .env
-python -m db.init_db --admin <your_tg_id> --username simon
+Linux / Raspberry Pi:
+
+```bash
+sudo apt-get install -y git python3-venv ffmpeg && git clone -b claude/nice-sagan-eoqy9o https://github.com/egwyl666/insta_saver.git ~/dl_bot && cd ~/dl_bot && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python -m db.init_db --setup
 ```
 
-Run manually: `python -m bot.main`
+Windows (PowerShell, needs Python 3.10+ and winget):
+
+```powershell
+winget install -e --id Git.Git; winget install -e --id Gyan.FFmpeg; git clone -b claude/nice-sagan-eoqy9o https://github.com/egwyl666/insta_saver.git $HOME\dl_bot; cd $HOME\dl_bot; py -m venv .venv; .venv\Scripts\pip install -r requirements.txt; .venv\Scripts\python -m db.init_db --setup
+```
+
+`--setup` is safe to re-run: it keeps what is already filled in and only asks for what is missing.
+
+Run manually: `.venv/bin/python -m bot.main` (Windows: `.venv\Scripts\python -m bot.main`)
+
+ffmpeg is needed by yt-dlp to merge separate video/audio tracks (reels, Twitter videos).
 
 Deploy on a Pi: `bash deploy/install.sh` — fills in REPLACE_USER/REPLACE_HOME,
 installs the systemd units and enables weekly updates of yt-dlp and gallery-dl.
@@ -55,11 +63,12 @@ logged in to a **throwaway** account. Not your main one.
 ## Testing
 
 ```bash
-python smoke_test.py        # 45 checks: database, links, encryption
-python smoke_test_bot.py    # 36 checks: bot core against a fake Telegram
+python smoke_test.py        # database, links, encryption
+python smoke_test_bot.py    # bot core against a fake Telegram, error classification
 ```
 
 Both run on a temporary database without network access and never touch the production one.
+GitHub Actions runs them on every push.
 
 ## Files
 

@@ -68,18 +68,40 @@ def load(rel_path: str) -> bytes:
         raise CookiesError("Не удалось расшифровать cookies — сменился COOKIES_KEY?") from exc
 
 
+def _save_back(rel_path: str, tmp: Path, original: bytes) -> None:
+    """Утилиты дописывают в файл обновлённые cookies (продлённая сессия).
+    Если выкинуть их вместе с временным файлом, сессия умирает быстрее."""
+    try:
+        updated = tmp.read_bytes()
+    except OSError:
+        return
+    if updated == original:
+        return
+    try:
+        _validate_netscape(updated)
+    except CookiesError:
+        return  # утилита записала что-то странное — оставляем старые
+    path = COOKIES_DIR.parent.parent / rel_path
+    path.write_bytes(_fernet().encrypt(updated))
+    os.chmod(path, 0o600)
+
+
 @contextmanager
-def materialized(rel_path: str):
+def materialized(rel_path: str, save_back: bool = False):
     """Временно кладёт расшифрованные cookies на диск для yt-dlp / gallery-dl.
 
     Нужен именно файл: обе утилиты не умеют принимать cookies потоком.
+    save_back=True — после успешной работы сохранить обновлённые утилитой cookies.
     """
+    original = load(rel_path)
     fd, tmp = tempfile.mkstemp(prefix="ck_", suffix=".txt")
     try:
-        os.write(fd, load(rel_path))
+        os.write(fd, original)
         os.close(fd)
         os.chmod(tmp, 0o600)
         yield Path(tmp)
+        if save_back:
+            _save_back(rel_path, Path(tmp), original)
     finally:
         try:
             os.remove(tmp)

@@ -13,6 +13,8 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
+from telegram.error import TelegramError
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 tmpdb = Path(tempfile.mkdtemp()) / "smoke2.db"
@@ -116,6 +118,15 @@ cases = [
     ("ERROR: No video could be found in this tweet", dl.E_EMPTY),
     ("Your cookies are no longer valid", dl.E_AUTH_EXPIRED),
     ("ERROR: unable to download webpage", dl.E_UNKNOWN),
+    # протухшие cookies у gallery-dl выглядят как редирект на логин
+    ("[instagram][error] HTTP redirect to login page (https://www.instagram.com/accounts/login/)",
+     dl.E_AUTH_EXPIRED),
+    ("[instagram][error] Account is private", dl.E_PRIVATE),
+    # "age" внутри "message"/"image" — не возрастное ограничение
+    ("ERROR: Unable to download image: message truncated", dl.E_UNKNOWN),
+    ("HTTP Error 500: page error", dl.E_UNKNOWN),
+    ("ERROR: This video is age-restricted", dl.E_LOGIN),
+    ("ERROR: [twitter] 1: NSFW tweet requires authentication", dl.E_LOGIN),
 ]
 for text, expected in cases:
     got = dl.classify(text)
@@ -243,6 +254,41 @@ async def main():
     queued_id = await qmod.task_queue.get()
     await qmod.process(bot, queued_id)
     check("на втором аккаунте скачалось", storage.get_task(t5)["status"] == "done")
+
+    print("\n== Rate limit ==")
+
+    async def fake_rate(url, work_dir, cookies=None, timeout=300):
+        raise dl.DownloadError(dl.E_RATE, "429 Too Many Requests")
+
+    qmod.DOWNLOADERS["instagram"] = fake_rate
+    t_rate = storage.create_task(222, 222, "https://instagram.com/p/RATE", "h_RATE",
+                                 "instagram", "post", "someone")
+    await qmod.process(bot, t_rate)
+    resting = [a for a in storage.list_accounts("instagram") if a["status"] == "cooldown"]
+    check("аккаунт после rate limit ушёл отдыхать", len(resting) == 1,
+          f"{[a['status'] for a in storage.list_accounts()]}")
+    check("других нет — задача failed, а не по кругу", storage.get_task(t_rate)["status"] == "failed")
+
+    print("\n== Частичная отправка ==")
+
+    class FlakyBot(FakeBot):
+        async def send_media_group(self, chat_id, media, **kw):
+            if len(media) == 2:  # второй альбом телега «не приняла»
+                raise TelegramError("boom")
+            return await super().send_media_group(chat_id, media, **kw)
+
+    async def fake_twelve(url, work_dir, cookies=None, timeout=300):
+        make_files(work_dir, [f"{i:02d}_p.jpg" for i in range(12)])
+        return dl.DownloadResult(items=dl.collect(work_dir))
+
+    qmod.DOWNLOADERS["twitter"] = fake_twelve
+    flaky = FlakyBot()
+    t_part = storage.create_task(222, 222, "https://twitter.com/u/status/12", "h_PART",
+                                 "twitter", "post", "u")
+    await qmod.process(flaky, t_part)
+    check("юзеру сказали, что часть не дошла",
+          any("не приняла" in m for m in flaky.messages), f"{flaky.messages}")
+    check("огрызок не закэширован", storage.get_cached("h_PART") == [])
 
     print("\n== Нет аккаунтов ==")
     for a in storage.list_accounts("instagram"):

@@ -8,7 +8,9 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import shutil
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -55,29 +57,30 @@ class DownloadResult:
     title: str | None = None
 
 
+# Порядок важен: сначала то, что решает судьбу аккаунта, потом остальное.
+# Шаблоны с границами слов — голый "age" ловил "message" и "image".
+_PATTERNS: list[tuple[str, re.Pattern]] = [
+    (E_BLOCKED, re.compile(r"checkpoint|challenge_required|suspicious|account (?:has been )?(?:suspended|disabled)")),
+    (E_AUTH_EXPIRED, re.compile(
+        r"redirect(?:ed)? to (?:the )?login page|accounts/login|login_required"
+        r"|cookies are no longer valid|authentication cookies|csrf|session\b.*\bexpired")),
+    (E_PRIVATE, re.compile(r"\bprivate (?:account|profile|user)|\bis private\b"
+                           r"|not authorized to view|follow this account")),
+    (E_LOGIN, re.compile(r"login required|requires authentication|\bsign in\b"
+                         r"|\bage[- ]restrict|confirm your age|\bnsfw\b")),
+    (E_RATE, re.compile(r"\b429\b|rate[- ]limit|too many requests|please wait a few minutes")),
+    (E_NOT_FOUND, re.compile(r"\b404\b|not found|has been removed|page isn't available|does not exist")),
+    (E_EMPTY, re.compile(r"no video could be found|unsupported url|no results|no media")),
+]
+
+
 def classify(output: str) -> str:
     """Разбор stderr утилит. Сообщения меняются от версии к версии,
     поэтому ловим по устойчивым кускам, а не по точным строкам."""
     low = (output or "").lower()
-
-    if "login required" in low or "requires authentication" in low or "sign in" in low:
-        return E_LOGIN
-    if "age" in low and ("restrict" in low or "confirm" in low):
-        return E_LOGIN
-    if "private" in low or "not authorized to view" in low or "follow this account" in low:
-        return E_PRIVATE
-    if "checkpoint" in low or "challenge_required" in low or "suspicious" in low:
-        return E_BLOCKED
-    if "csrf" in low or "session" in low and "expired" in low:
-        return E_AUTH_EXPIRED
-    if "login_required" in low or "authentication cookies" in low or "cookies are no longer valid" in low:
-        return E_AUTH_EXPIRED
-    if "429" in low or "rate limit" in low or "too many requests" in low or "please wait a few minutes" in low:
-        return E_RATE
-    if "404" in low or "not found" in low or "unavailable" in low or "has been removed" in low:
-        return E_NOT_FOUND
-    if "no video could be found" in low or "unsupported url" in low or "no results" in low:
-        return E_EMPTY
+    for code, pattern in _PATTERNS:
+        if pattern.search(low):
+            return code
     return E_UNKNOWN
 
 
@@ -113,7 +116,9 @@ def collect(work_dir: Path) -> list[MediaItem]:
 
 
 def tool_path(name: str) -> str:
-    found = shutil.which(name)
+    # systemd и Windows запускают .venv/bin/python без activate, и bin/ venv
+    # в PATH нет — поэтому сначала ищем утилиту рядом с интерпретатором.
+    found = shutil.which(name, path=str(Path(sys.executable).parent)) or shutil.which(name)
     if not found:
         raise DownloadError(E_UNKNOWN, f"{name} не установлен (pip install {name})")
     return found

@@ -18,7 +18,7 @@ from bot.sender import cleanup, send_from_cache, send_media
 from common.config import TMP_DIR
 from db import storage
 from downloaders import instagram, twitter
-from downloaders.base import ACCOUNT_FATAL, E_PRIVATE, DownloadError, check_sizes
+from downloaders.base import ACCOUNT_FATAL, E_PRIVATE, E_RATE, DownloadError, check_sizes
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ async def process(bot, task_id: int) -> None:
 
     try:
         if account:
-            with crypto.materialized(account["cookies_path"]) as cookies:
+            with crypto.materialized(account["cookies_path"], save_back=True) as cookies:
                 result = await download(url, work_dir, cookies=cookies)
         else:
             result = await download(url, work_dir, cookies=None)
@@ -102,6 +102,9 @@ async def process(bot, task_id: int) -> None:
 
         if skipped:
             await bot.send_message(chat_id, texts.PARTIAL_TOO_BIG.format(n=skipped))
+        failed = len(result.items) - skipped - sent
+        if failed > 0:
+            await bot.send_message(chat_id, texts.PARTIAL_SEND_FAILED.format(n=failed))
 
         storage.set_task_status(task_id, "done", account_id=account["id"] if account else None,
                                 files_sent=sent)
@@ -131,6 +134,16 @@ async def _handle_failure(bot, task: dict, account: dict | None, exc: DownloadEr
         storage.set_account_status(account["id"], "expired" if code == "AUTH_EXPIRED" else "blocked",
                                    note=exc.detail[:200])
         await alerts.account_died(bot, account, code)
+        if storage.pick_account(task["source"]):
+            storage.set_task_status(task_id, "queued")
+            await enqueue(task_id)
+            storage.log("retry_other_account", task_id=task_id, account_id=account["id"])
+            return
+
+    # Rate limit — аккаунт отдыхает, задача пробует другой, если он есть.
+    if account and code == E_RATE:
+        storage.cooldown_account(account["id"], storage.get_int("account_rate_cooldown_min", 30))
+        storage.log("account_rate_limited", task_id=task_id, account_id=account["id"])
         if storage.pick_account(task["source"]):
             storage.set_task_status(task_id, "queued")
             await enqueue(task_id)

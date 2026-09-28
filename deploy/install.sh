@@ -5,6 +5,11 @@ set -euo pipefail
 USER_NAME="${SUDO_USER:-$USER}"
 HOME_DIR="$(eval echo "~$USER_NAME")"
 
+if ! command -v ffmpeg > /dev/null; then
+    # yt-dlp склеивает им раздельные видео/аудио дорожки (рилсы, твиттер)
+    sudo apt-get install -y ffmpeg
+fi
+
 for unit in dl_bot.service dl_bot_update.service dl_bot_update.timer; do
     sed -e "s|REPLACE_USER|$USER_NAME|g" -e "s|REPLACE_HOME|$HOME_DIR|g" \
         "deploy/$unit" | sudo tee "/etc/systemd/system/$unit" > /dev/null

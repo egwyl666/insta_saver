@@ -232,6 +232,16 @@ def touch_account(account_id: int, ok: bool = True) -> None:
             )
 
 
+def cooldown_account(account_id: int, minutes: int) -> None:
+    """Принудительный отдых: инста ответила rate limit."""
+    with db() as conn:
+        conn.execute(
+            "UPDATE accounts SET status = 'cooldown', cooldown_until = ?, last_checked_at = ? "
+            "WHERE id = ? AND status IN ('active', 'cooldown')",
+            (_in(minutes), _now(), account_id),
+        )
+
+
 def set_account_status(account_id: int, status: str, note: str | None = None) -> None:
     with db() as conn:
         conn.execute(

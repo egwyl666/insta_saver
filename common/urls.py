@@ -28,7 +28,10 @@ TWITTER_HOSTS = {"twitter.com", "x.com", "mobile.twitter.com"}
 INSTAGRAM_HOSTS = {"instagram.com", "instagr.am"}
 
 # Мусорные query-параметры из шаринга. Без их вырезания кэш не попадает.
-JUNK_PARAMS_PREFIXES = ("igsh", "igshid", "utm_", "s", "t", "ref", "ref_src", "ref_url", "si")
+# Короткие имена — только точным совпадением: префикс "s" резал бы любой
+# параметр на s (story_media_id и т.п.).
+JUNK_PARAMS_PREFIXES = ("igsh", "utm_")
+JUNK_PARAMS_EXACT = {"s", "t", "si", "ref", "ref_src", "ref_url"}
 
 URL_RE = re.compile(r"https?://[^\s<>\"]+", re.IGNORECASE)
 
@@ -62,7 +65,7 @@ def _clean_query(query: str) -> str:
         if not part:
             continue
         key = part.split("=", 1)[0].lower()
-        if key.startswith(JUNK_PARAMS_PREFIXES):
+        if key in JUNK_PARAMS_EXACT or key.startswith(JUNK_PARAMS_PREFIXES):
             continue
         keep.append(part)
     return "&".join(keep)

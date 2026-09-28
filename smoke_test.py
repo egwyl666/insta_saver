@@ -89,6 +89,14 @@ with crypto.materialized(rel) as p:
     check("materialized отдаёт живой файл", p.read_bytes() == raw)
     tmp_path = p
 check("временный файл подчищен", not tmp_path.exists())
+rel_upd = crypto.store("test_upd", raw)
+fresh = raw + b".instagram.com\tTRUE\t/\tTRUE\t0\tcsrftoken\tnew\n"
+with crypto.materialized(rel_upd, save_back=True) as p:
+    p.write_bytes(fresh)
+check("обновлённые утилитой cookies сохранены", crypto.load(rel_upd) == fresh)
+with crypto.materialized(rel_upd, save_back=True) as p:
+    p.write_bytes(b"garbage")
+check("мусор вместо cookies не сохраняется", crypto.load(rel_upd) == fresh)
 try:
     crypto.store("bad", b"definitely not cookies")
     check("мусорный файл отбит", False)

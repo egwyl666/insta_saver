@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from telegram import Update
-from telegram.constants import ParseMode
+from telegram.constants import ChatType, ParseMode
 from telegram.ext import ContextTypes
 
 from bot import texts
@@ -42,11 +43,22 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(texts.START)
 
 
+_denied_at: dict[int, float] = {}
+DENIED_REPLY_EVERY = 3600  # чужим отвечаем не чаще раза в час, а не на каждое сообщение
+
+
 async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # В группе бот молчит обо всём, кроме ссылок от своих, — иначе он будет
+    # отвечать «ссылок нет» на каждую реплику.
+    private = update.effective_chat.type == ChatType.PRIVATE
+
     allowed, tg_id = _guard(update)
     if not allowed:
-        row = storage.get_user(tg_id)
-        await update.message.reply_text(texts.BANNED if row else texts.NOT_ALLOWED)
+        now = time.monotonic()
+        if private and now - _denied_at.get(tg_id, -DENIED_REPLY_EVERY) >= DENIED_REPLY_EVERY:
+            _denied_at[tg_id] = now
+            row = storage.get_user(tg_id)
+            await update.message.reply_text(texts.BANNED if row else texts.NOT_ALLOWED)
         return
 
     text = update.message.text or update.message.caption or ""
@@ -54,7 +66,8 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     parsed = [p for p in (urls.parse(u) for u in found) if p]
 
     if not parsed:
-        await update.message.reply_text(texts.NO_LINKS)
+        if private:
+            await update.message.reply_text(texts.NO_LINKS)
         return
 
     limit = storage.pending_limit(tg_id)

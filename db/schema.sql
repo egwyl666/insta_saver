@@ -124,6 +124,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
     ('check_interval_3_min',  '360'),   -- дальше: раз в 6 часов
     ('account_cooldown_min',  '5'),
     ('account_tasks_burst',   '10'),    -- столько задач подряд, потом cooldown
+    ('account_rate_cooldown_min', '30'), -- отдых аккаунта после rate limit
     ('cache_enabled',         '1'),
     ('stories_for_private',   '0'),     -- сторис приватных в очередь не ставим: протухнут
     ('tmp_keep_minutes',      '30');

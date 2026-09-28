@@ -39,7 +39,7 @@ async def account_died(bot, account: dict, code: str) -> None:
         bot,
         f"account_{account['id']}_{code}",
         f"Аккаунт «{account['label']}» выбыл ({code}).\n"
-        f"Обнови cookies в админке: /accounts",
+        f"Залей свежие cookies (см. README, раздел Cookies).",
     )
 
 
@@ -47,5 +47,5 @@ async def no_accounts(bot, platform: str = "instagram") -> None:
     await alert(
         bot,
         f"no_accounts_{platform}",
-        f"Живых аккаунтов для {platform} не осталось — задачи встают в очередь.",
+        f"Живых аккаунтов для {platform} не осталось — задачи падают с NO_ACCOUNT.",
     )
