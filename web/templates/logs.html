@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Лог{% endblock %}
+{% block body %}
+<h1>Лог событий</h1>
+<form class="card row" method="get">
+  <div><label for="event">Событие</label><input id="event" name="event" value="{{ event or '' }}" placeholder="например, alert"></div>
+  <button>Показать</button>
+  {% if event %}<a href="{{ url_for('logs') }}">сбросить</a>{% endif %}
+</form>
+<div class="card scroll">
+  <table>
+    <tr><th>когда</th><th>событие</th><th>юзер</th><th>задача</th><th>аккаунт</th><th>подробности</th></tr>
+    {% for l in logs %}
+    <tr>
+      <td class="muted">{{ l.created_at }}</td>
+      <td><a href="{{ url_for('logs', event=l.event) }}">{{ l.event }}</a></td>
+      <td>{{ l.tg_id or '' }}</td><td>{{ l.task_id or '' }}</td><td>{{ l.account_id or '' }}</td>
+      <td class="wrap">{{ l.detail or '' }}</td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted">пусто</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}

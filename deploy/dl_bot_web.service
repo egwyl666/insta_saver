@@ -1,0 +1,23 @@
+[Unit]
+Description=dl_bot - web admin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=REPLACE_USER
+WorkingDirectory=REPLACE_HOME/dl_bot
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=REPLACE_HOME/dl_bot/.venv/bin/python -m web.app
+Restart=always
+RestartSec=10
+
+# Немного изоляции: боту не нужен доступ никуда, кроме своей папки
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=REPLACE_HOME/dl_bot
+
+[Install]
+WantedBy=multi-user.target

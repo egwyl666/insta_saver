@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from accounts import crypto  # noqa: E402
+from accounts import crypto, pool  # noqa: E402
 from db import storage  # noqa: E402
 
 
@@ -43,17 +43,14 @@ def main() -> None:
 
     label = args.label or args.cookies.stem
     try:
-        rel = crypto.store(label, args.cookies.read_bytes())
+        account_id, created = pool.add_or_update(label, args.cookies.read_bytes(), args.platform)
     except crypto.CookiesError as exc:
         raise SystemExit(f"[!] {exc}")
 
-    existing = next((a for a in storage.list_accounts() if a["label"] == label), None)
-    if existing:
-        storage.update_account_cookies(existing["id"], rel)
-        print(f"[ok] cookies аккаунта «{label}» обновлены, он снова в пуле (#{existing['id']})")
-    else:
-        account_id = storage.add_account(label, rel, platform=args.platform)
+    if created:
         print(f"[ok] аккаунт «{label}» добавлен в пул (#{account_id})")
+    else:
+        print(f"[ok] cookies аккаунта «{label}» обновлены, он снова в пуле (#{account_id})")
 
     print(f"[i] cookies зашифрованы. Исходный файл лучше удалить: rm {args.cookies}")
 

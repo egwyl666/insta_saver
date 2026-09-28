@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Задачи{% endblock %}
+{% block body %}
+<h1>Задачи</h1>
+<div class="card">
+  <a href="{{ url_for('tasks') }}"><span class="pill {{ 'active' if not status }}">все</span></a>
+  {% for st in statuses %}
+    <a href="{{ url_for('tasks', status=st) }}"><span class="pill {{ st if st == status }}">{{ st }}</span></a>
+  {% endfor %}
+</div>
+<div class="card scroll">
+  <table>
+    <tr><th>#</th><th>создана</th><th>кто</th><th>источник</th><th>статус</th><th>файлов</th><th>ссылка / ошибка</th><th></th></tr>
+    {% for t in tasks %}
+    <tr>
+      <td>{{ t.id }}</td><td class="muted">{{ t.created_at }}</td><td>{{ t.tg_id }}</td>
+      <td>{{ t.source }} · {{ t.media_kind }}</td>
+      <td><span class="pill {{ t.status }}">{{ t.status }}</span></td>
+      <td>{{ t.files_sent }}</td>
+      <td class="wrap">{{ t.url }}{% if t.error_code %}<div class="muted">{{ t.error_code }}: {{ (t.error_detail or '')[:200] }}</div>{% endif %}</td>
+      <td>{% if t.status in ('queued', 'pending_access') %}
+        <form class="inline" method="post" action="{{ url_for('tasks_cancel', task_id=t.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><button>Снять</button>
+        </form>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="8" class="muted">пусто</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}

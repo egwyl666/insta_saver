@@ -55,7 +55,9 @@ def main() -> None:
         raise SystemExit("BOT_TOKEN не задан в .env")
 
     storage.init_db()
-    if ADMIN_TG_ID:
+    # Только первый запуск: дальше админами рулят из админки и /admin,
+    # и рестарт не должен возвращать права (или снимать бан) тому, кого понизили.
+    if ADMIN_TG_ID and not storage.get_user(ADMIN_TG_ID):
         storage.add_user(ADMIN_TG_ID, role="admin")
 
     app = (
@@ -74,6 +76,8 @@ def main() -> None:
     app.add_handler(CommandHandler("allow", handlers.cmd_allow))
     app.add_handler(CommandHandler("ban", handlers.cmd_ban))
     app.add_handler(CommandHandler("stats", handlers.cmd_stats))
+    app.add_handler(CommandHandler("owner", handlers.cmd_owner))
+    app.add_handler(CommandHandler("unowner", handlers.cmd_unowner))
     app.add_handler(MessageHandler(
         (filters.TEXT | filters.CAPTION) & ~filters.COMMAND, handlers.on_message))
 

@@ -154,9 +154,50 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(texts.BAN_USAGE)
         return
     target = int(context.args[0])
-    storage.set_user_status(target, "banned")
+    try:
+        storage.ban_user(target)
+    except storage.LastAdminError as exc:
+        await update.message.reply_text(str(exc))
+        return
     await update.message.reply_text(texts.USER_BANNED.format(id=target))
     storage.log("user_banned", tg_id=tg_id, detail=str(target))
+
+
+async def cmd_owner(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/owner — список; /owner <id> — добавить владельца."""
+    tg_id = update.effective_user.id
+    if not storage.is_admin(tg_id):
+        await update.message.reply_text(texts.ADMIN_ONLY)
+        return
+    if not context.args:
+        await update.message.reply_text(
+            texts.OWNERS_LIST.format(ids=", ".join(map(str, storage.admin_ids()))) + "\n\n" + texts.OWNER_USAGE)
+        return
+    if not context.args[0].isdigit():
+        await update.message.reply_text(texts.OWNER_USAGE)
+        return
+    target = int(context.args[0])
+    storage.make_admin(target, added_by=tg_id)
+    await update.message.reply_text(texts.OWNER_ADDED.format(id=target))
+    storage.log("owner_added", tg_id=tg_id, detail=str(target))
+
+
+async def cmd_unowner(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    tg_id = update.effective_user.id
+    if not storage.is_admin(tg_id):
+        await update.message.reply_text(texts.ADMIN_ONLY)
+        return
+    if not context.args or not context.args[0].isdigit():
+        await update.message.reply_text(texts.OWNER_USAGE)
+        return
+    target = int(context.args[0])
+    try:
+        storage.demote_admin(target)
+    except storage.LastAdminError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    await update.message.reply_text(texts.OWNER_REMOVED.format(id=target))
+    storage.log("owner_removed", tg_id=tg_id, detail=str(target))
 
 
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

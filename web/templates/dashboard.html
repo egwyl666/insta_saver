@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Сводка{% endblock %}
+{% block body %}
+<h1>Сводка</h1>
+<div class="grid">
+  <div class="card stat"><b>{{ s.tasks_day }}</b><span>задач за сутки</span></div>
+  <div class="card stat"><b>{{ s.tasks_week }}</b><span>задач за неделю</span></div>
+  <div class="card stat"><b>{{ s.accounts.get('active', 0) }}</b><span>живых аккаунтов из {{ accounts|length }}</span></div>
+  <div class="card stat"><b>{{ s.cache['items'] }}</b><span>в кэше, {{ s.cache['hits'] }} попаданий</span></div>
+</div>
+
+{% set dead = accounts|selectattr('status', 'in', ['expired', 'blocked'])|list %}
+{% if dead %}
+<div class="flash err">Выбыли аккаунты: {% for a in dead %}«{{ a.label }}» ({{ a.status }}){{ ', ' if not loop.last }}{% endfor %}.
+  Обнови cookies в разделе <a href="{{ url_for('accounts') }}">Аккаунты</a>.</div>
+{% endif %}
+
+<div class="card">
+  <h2 style="margin-top:0">Задачи по статусам</h2>
+  {% for st, n in s.by_status.items() %}
+    <a href="{{ url_for('tasks', status=st) }}"><span class="pill {{ st }}">{{ st }}: {{ n }}</span></a>
+  {% else %}<span class="muted">задач ещё не было</span>{% endfor %}
+
+  {% if s.top_users %}
+  <h2>Активнее всех за неделю</h2>
+  {% for u in s.top_users %}
+    <div>{{ u.username and '@' ~ u.username or u.tg_id }} — {{ u.n }}</div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Последние ошибки</h2>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>когда</th><th>код</th><th>ссылка</th></tr>
+    {% for t in failed %}
+      <tr><td>{{ t.id }}</td><td class="muted">{{ t.created_at }}</td>
+          <td><span class="pill failed">{{ t.error_code }}</span></td><td class="wrap">{{ t.url }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">ошибок нет</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

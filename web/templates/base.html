@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Админка{% endblock %} · dl_bot</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e4e7ec;
+    --accent: #2f6fed; --ok: #1f9d55; --warn: #c27c0e; --err: #d64545;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #13161c; --card: #1c2029; --text: #e6e8ec; --muted: #9aa3b2; --line: #2c323d;
+      --accent: #6b9bff; --ok: #4cc38a; --warn: #e3a13b; --err: #f07171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex;
+         flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+  .brand { font-weight: 700; margin-right: 8px; }
+  nav a { color: var(--muted); text-decoration: none; padding: 4px 0; }
+  nav a.on, nav a:hover { color: var(--text); }
+  nav { display: flex; flex-wrap: wrap; gap: 4px 14px; flex: 1; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 16px; }
+  h2 { font-size: 16px; margin: 24px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 16px; margin-bottom: 16px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .stat b { display: block; font-size: 24px; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line);
+           vertical-align: top; white-space: nowrap; }
+  td.wrap { white-space: normal; word-break: break-all; min-width: 200px; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .muted { color: var(--muted); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px;
+          border: 1px solid var(--line); }
+  .pill.active, .pill.done { color: var(--ok); border-color: currentColor; }
+  .pill.cooldown, .pill.queued, .pill.running, .pill.pending_access { color: var(--warn); border-color: currentColor; }
+  .pill.expired, .pill.blocked, .pill.failed, .pill.banned { color: var(--err); border-color: currentColor; }
+  form.inline { display: inline; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 3px; }
+  input, select { font: inherit; color: var(--text); background: var(--bg);
+                  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+           border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { color: var(--err); }
+  button.link { border: 0; background: none; color: var(--muted); padding: 4px 0; }
+  .flash { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid; }
+  .flash.ok { color: var(--ok); } .flash.err { color: var(--err); }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+{% if session.auth %}
+<header><div class="bar">
+  <span class="brand">dl_bot</span>
+  <nav>
+    {% for ep, name in [('dashboard','Сводка'),('accounts','Аккаунты'),('users','Пользователи'),
+                        ('tasks','Задачи'),('settings','Настройки'),('logs','Лог')] %}
+      <a href="{{ url_for(ep) }}" class="{{ 'on' if request.endpoint == ep }}">{{ name }}</a>
+    {% endfor %}
+  </nav>
+  <form class="inline" method="post" action="{{ url_for('logout') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Выйти</button>
+  </form>
+</div></header>
+{% endif %}
+<main>
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

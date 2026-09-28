@@ -35,7 +35,8 @@ COOKIES_KEY = os.getenv("COOKIES_KEY", "")          # Fernet-ключ для ш�
 WEB_SECRET_KEY = os.getenv("WEB_SECRET_KEY", "")
 WEB_USER = os.getenv("WEB_USER", "admin")
 WEB_PASSWORD_HASH = os.getenv("WEB_PASSWORD_HASH", "")
-WEB_PORT = int(os.getenv("WEB_PORT", "8082"))
+WEB_PORT = int(os.getenv("WEB_PORT", "9000") or 9000)
+WEB_HOST = os.getenv("WEB_HOST", "0.0.0.0")  # 127.0.0.1 — только с самой машины
 
 for _d in (DATA_DIR, COOKIES_DIR, BACKUP_DIR, TMP_DIR):
     _d.mkdir(parents=True, exist_ok=True)

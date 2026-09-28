@@ -71,6 +71,10 @@ ALLOW_USAGE = "Использование: /allow <tg_id> [ник]"
 ALLOWED = "Юзер {id} добавлен."
 BAN_USAGE = "Использование: /ban <tg_id>"
 USER_BANNED = "Юзер {id} забанен."
+OWNER_USAGE = "Использование: /owner <tg_id> — добавить владельца, /unowner <tg_id> — понизить"
+OWNER_ADDED = "{id} теперь владелец: админские команды и алерты."
+OWNER_REMOVED = "{id} больше не владелец (доступ к боту остался)."
+OWNERS_LIST = "Владельцы: {ids}"
 
 
 def error_text(code: str, detail: str = "") -> str:

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% macro act(tg_id, action, text, cls='') %}
+  <form class="inline" method="post" action="{{ url_for('users_action', tg_id=tg_id, action=action) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button class="{{ cls }}">{{ text }}</button>
+  </form>
+{% endmacro %}
+{% block body %}
+<h1>Пользователи</h1>
+
+<div class="card">
+  <h2 style="margin-top:0">Добавить</h2>
+  <form method="post" action="{{ url_for('users_add') }}" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div><label for="tg_id">Telegram ID</label><input id="tg_id" name="tg_id" inputmode="numeric" required placeholder="123456789"></div>
+    <div><label for="username">Ник (необязательно)</label><input id="username" name="username" placeholder="@nick"></div>
+    <div><label for="role">Роль</label>
+      <select id="role" name="role"><option value="user">пользователь</option><option value="admin">владелец</option></select></div>
+    <button class="primary">Добавить</button>
+  </form>
+  <p class="hint">Владельцы — все админы: у них админские команды в боте (/allow, /ban, /owner, /stats)
+    и им приходят алерты. Сменить владельца = добавить нового и понизить старого. ID узнаётся у @userinfobot.</p>
+</div>
+
+<div class="card scroll">
+  <table>
+    <tr><th>Telegram ID</th><th>ник</th><th>роль</th><th>статус</th><th>добавлен</th><th></th></tr>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.tg_id }}</td><td>{{ u.username and '@' ~ u.username or '' }}</td>
+      <td>{% if u.tg_id in admins %}<b>владелец</b>{% elif u.role == 'admin' %}админ{% else %}пользователь{% endif %}</td>
+      <td><span class="pill {{ u.status }}">{{ u.status }}</span></td>
+      <td class="muted">{{ u.added_at }}</td>
+      <td>
+        {% if u.role == 'admin' %}{{ act(u.tg_id, 'demote', 'Понизить') }}{% else %}{{ act(u.tg_id, 'make_admin', 'Сделать владельцем') }}{% endif %}
+        {% if u.status == 'banned' %}{{ act(u.tg_id, 'unban', 'Разбанить') }}{% else %}{{ act(u.tg_id, 'ban', 'Забанить', 'danger') }}{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -16,3 +16,4 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python smoke_test.py
       - run: python smoke_test_bot.py
+      - run: python smoke_test_web.py

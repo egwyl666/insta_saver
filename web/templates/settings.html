@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block body %}
+<h1>Настройки</h1>
+<form method="post" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="scroll"><table>
+    {% for key, value in settings %}
+    <tr>
+      <td><label for="{{ key }}" style="color:inherit">{{ key }}</label>
+          <div class="muted" style="white-space:normal">{{ help.get(key, '') }}</div></td>
+      <td><input id="{{ key }}" name="{{ key }}" value="{{ value }}" size="8"></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  <p><button class="primary">Сохранить</button></p>
+  <p class="hint">Бот подхватывает изменения сразу. Перед сохранением делается бэкап базы в data/backups.</p>
+</form>
+{% endblock %}

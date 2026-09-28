@@ -145,6 +145,40 @@ def set_user_status(tg_id: int, status: str) -> None:
         conn.execute("UPDATE users SET status = ? WHERE tg_id = ?", (status, tg_id))
 
 
+def set_user_role(tg_id: int, role: str) -> None:
+    with db() as conn:
+        conn.execute("UPDATE users SET role = ? WHERE tg_id = ?", (role, tg_id))
+
+
+class LastAdminError(ValueError):
+    """Нельзя оставить бота без единого админа."""
+
+
+def make_admin(tg_id: int, username: str | None = None, added_by: int | None = None) -> None:
+    add_user(tg_id, username, role="admin", added_by=added_by)
+    set_user_role(tg_id, "admin")
+
+
+def demote_admin(tg_id: int) -> None:
+    if admin_ids() == [tg_id]:
+        raise LastAdminError("это последний админ — сначала назначь другого")
+    set_user_role(tg_id, "user")
+
+
+def ban_user(tg_id: int) -> None:
+    if admin_ids() == [tg_id]:
+        raise LastAdminError("это последний админ — его нельзя забанить")
+    set_user_status(tg_id, "banned")
+
+
+def admin_ids() -> list[int]:
+    """Владельцы бота — все активные админы: им летят алерты."""
+    with db() as conn:
+        rows = _rows(conn, "SELECT tg_id FROM users WHERE role = 'admin' AND status = 'active' "
+                           "ORDER BY added_at")
+    return [r["tg_id"] for r in rows]
+
+
 def list_users() -> list[dict]:
     with db() as conn:
         return _rows(conn, "SELECT * FROM users ORDER BY added_at DESC")
@@ -257,6 +291,17 @@ def update_account_cookies(account_id: int, cookies_path: str) -> None:
             "cooldown_until = NULL WHERE id = ?",
             (cookies_path, account_id),
         )
+
+
+def delete_account(account_id: int) -> dict | None:
+    """Удаляет аккаунт; задачи сохраняют историю, но без ссылки на него."""
+    with db() as conn:
+        account = _row(conn, "SELECT * FROM accounts WHERE id = ?", (account_id,))
+        if account:
+            conn.execute("UPDATE tasks SET account_id = NULL WHERE account_id = ?", (account_id,))
+            conn.execute("DELETE FROM private_targets WHERE account_id = ?", (account_id,))
+            conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+    return account
 
 
 def has_active_accounts(platform: str = "instagram") -> bool:

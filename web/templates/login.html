@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block body %}
+<div class="card" style="max-width:360px;margin:60px auto">
+  <h1>dl_bot</h1>
+  {% if no_password %}
+    <p>Пароль админки не задан. На машине с ботом выполни:</p>
+    <p><code>.venv/bin/python -m db.init_db --web-password</code></p>
+    <p class="muted">и перезапусти админку.</p>
+  {% else %}
+  <form method="post">
+    <p><label for="user">Логин</label><input id="user" name="user" autocomplete="username" required style="width:100%"></p>
+    <p><label for="password">Пароль</label><input id="password" name="password" type="password" autocomplete="current-password" required style="width:100%"></p>
+    <button class="primary" style="width:100%">Войти</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

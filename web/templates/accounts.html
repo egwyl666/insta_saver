@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Аккаунты{% endblock %}
+{% block body %}
+<h1>Аккаунты</h1>
+
+<div class="card">
+  <h2 style="margin-top:0">Добавить или обновить cookies</h2>
+  <form method="post" action="{{ url_for('accounts_upload') }}" enctype="multipart/form-data" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div><label for="label">Имя в пуле</label><input id="label" name="label" placeholder="acc_one"></div>
+    <div><label for="platform">Платформа</label>
+      <select id="platform" name="platform"><option>instagram</option><option>twitter</option></select></div>
+    <div><label for="cookies">cookies.txt</label><input id="cookies" type="file" name="cookies" accept=".txt,text/plain" required></div>
+    <button class="primary">Загрузить</button>
+  </form>
+  <p class="hint">Файл в формате Netscape из расширения «Get cookies.txt LOCALLY» (Chrome) или «cookies.txt» (Firefox),
+    выгруженный из браузера, где открыт <b>запасной</b> аккаунт. То же имя — обновит cookies выбывшего аккаунта и вернёт его в пул.</p>
+</div>
+
+<div class="card scroll">
+  <table>
+    <tr><th>#</th><th>имя</th><th>платформа</th><th>статус</th><th>задач</th><th>последний раз ок</th><th>заметка</th><th></th></tr>
+    {% for a in accounts %}
+    <tr>
+      <td>{{ a.id }}</td><td>{{ a.label }}</td><td>{{ a.platform }}</td>
+      <td><span class="pill {{ a.status }}">{{ a.status }}</span>
+          {% if a.status == 'cooldown' %}<div class="muted">до {{ a.cooldown_until }}</div>{% endif %}</td>
+      <td>{{ a.tasks_total }}</td><td class="muted">{{ a.last_ok_at or '—' }}</td>
+      <td class="wrap muted">{{ a.note or '' }}</td>
+      <td>
+        <form class="inline" method="post" action="{{ url_for('accounts_status', account_id=a.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          {% if a.status == 'disabled' %}
+            <input type="hidden" name="status" value="active"><button>Включить</button>
+          {% else %}
+            <input type="hidden" name="status" value="disabled"><button>Выключить</button>
+          {% endif %}
+        </form>
+        <form class="inline" method="post" action="{{ url_for('accounts_delete', account_id=a.id) }}"
+              onsubmit="return confirm('Удалить аккаунт «{{ a.label }}» и его cookies?')">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger">Удалить</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="muted">Пул пуст. Публичное инста отдаёт и так; аккаунт нужен для закрытых профилей, 18+ и сторис.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
