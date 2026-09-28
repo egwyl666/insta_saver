@@ -47,5 +47,5 @@ async def no_accounts(bot, platform: str = "instagram") -> None:
     await alert(
         bot,
         f"no_accounts_{platform}",
-        f"Живых аккаунтов для {platform} не осталось — задачи падают с NO_ACCOUNT.",
+        f"Живых аккаунтов для {platform} не осталось — закрытое, 18+ и сторис не скачиваются.",
     )

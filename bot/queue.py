@@ -18,7 +18,8 @@ from bot.sender import cleanup, send_from_cache, send_media
 from common.config import TMP_DIR
 from db import storage
 from downloaders import instagram, twitter
-from downloaders.base import ACCOUNT_FATAL, E_PRIVATE, E_RATE, DownloadError, check_sizes
+from downloaders.base import (ACCOUNT_FATAL, E_NOT_FOUND, E_PRIVATE, E_RATE, DownloadError,
+                               check_sizes)
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +55,35 @@ async def _resolve_account(bot, source: str) -> dict | None:
     return account
 
 
+E_NO_ACCOUNT = "NO_ACCOUNT"
+
+# Без входа инста не отдаёт сторис и хайлайты вообще — не тратим запрос.
+NEEDS_LOGIN = {"story", "highlight"}
+# Эти ошибки аккаунт не исправит: удалённый пост удалён для всех.
+ANON_FINAL = {E_NOT_FOUND}
+ANON_RATE_PAUSE = 30 * 60  # после rate limit анонимно не ходим полчаса
+
+_anon_paused_until = 0.0
+_needs_account: set[int] = set()  # задачи, которые уже не прошли анонимно
+
+
+def _anon_allowed(task: dict) -> bool:
+    return (task["source"] == "instagram"
+            and task["media_kind"] not in NEEDS_LOGIN
+            and task["id"] not in _needs_account
+            and time.time() >= _anon_paused_until
+            and storage.get_bool("instagram_anon_first", True))
+
+
+def _note_anon_failure(task_id: int, code: str) -> None:
+    global _anon_paused_until
+    _needs_account.add(task_id)
+    if code == E_RATE:
+        _anon_paused_until = time.time() + ANON_RATE_PAUSE
+    storage.log("anon_failed", task_id=task_id, detail=code)
+    log.info("задача %s: анонимно не вышло (%s), пробую с аккаунтом", task_id, code)
+
+
 async def process(bot, task_id: int) -> None:
     task = storage.get_task(task_id)
     if not task or task["status"] not in ("queued", "running"):
@@ -71,23 +101,33 @@ async def process(bot, task_id: int) -> None:
         storage.log("served_from_cache", tg_id=task["tg_id"], task_id=task_id)
         return
 
-    # --- аккаунт ---
-    account = await _resolve_account(bot, task["source"])
-    if account is None and task["source"] == "instagram":
-        storage.set_task_status(task_id, "failed", error_code="NO_ACCOUNT",
-                                error_detail="нет живого аккаунта")
-        await bot.send_message(chat_id, "Сейчас нет рабочего аккаунта инсты. Владелец уже знает.")
-        return
-
     work_dir = TMP_DIR / f"task_{task_id}"
     download = DOWNLOADERS[task["source"]]
+    account = None
 
     try:
-        if account:
-            with crypto.materialized(account["cookies_path"], save_back=True) as cookies:
-                result = await download(url, work_dir, cookies=cookies)
-        else:
-            result = await download(url, work_dir, cookies=None)
+        # --- сначала без аккаунта: публичное инста отдаёт и так, а аккаунты целее ---
+        result = None
+        if _anon_allowed(task):
+            try:
+                result = await download(url, work_dir, cookies=None)
+                storage.log("downloaded_anon", task_id=task_id)
+            except DownloadError as exc:
+                if exc.code in ANON_FINAL:
+                    raise
+                _note_anon_failure(task_id, exc.code)
+                cleanup(work_dir)
+
+        # --- с аккаунтом: закрытые профили, 18+, сторис ---
+        if result is None:
+            account = await _resolve_account(bot, task["source"])
+            if account is None and task["source"] == "instagram":
+                raise DownloadError(E_NO_ACCOUNT, "нет живого аккаунта")
+            if account:
+                with crypto.materialized(account["cookies_path"], save_back=True) as cookies:
+                    result = await download(url, work_dir, cookies=cookies)
+            else:
+                result = await download(url, work_dir, cookies=None)
 
         check_sizes(result.items, storage.get_int("max_file_mb", 49))
 
@@ -123,6 +163,8 @@ async def process(bot, task_id: int) -> None:
         await alerts.alert(bot, "crash", f"Задача #{task_id} упала: {exc}"[:300])
     finally:
         cleanup(work_dir)
+        if storage.get_task(task_id)["status"] != "queued":
+            _needs_account.discard(task_id)
 
 
 async def _handle_failure(bot, task: dict, account: dict | None, exc: DownloadError) -> None:

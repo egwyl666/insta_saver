@@ -126,6 +126,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
     ('account_tasks_burst',   '10'),    -- столько задач подряд, потом cooldown
     ('account_rate_cooldown_min', '30'), -- отдых аккаунта после rate limit
     ('cache_enabled',         '1'),
+    ('instagram_anon_first',  '1'),     -- сначала пробуем инсту без аккаунта
     ('stories_for_private',   '0'),     -- сторис приватных в очередь не ставим: протухнут
     ('tmp_keep_minutes',      '30');
 

@@ -10,6 +10,7 @@ import asyncio
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -186,9 +187,41 @@ async def main():
     check("огромный файл пропущен, остальное ушло", sent == 1 and skipped == 1)
     check("частичный пост не кэшируется", storage.get_cached("hash_mixed") == [])
 
+    print("\n== Инста без аккаунта ==")
+    used_cookies = []
+
+    async def fake_public(url, work_dir, cookies=None, timeout=300):
+        used_cookies.append(cookies)
+        make_files(work_dir, ["01_pub.jpg"])
+        return dl.DownloadResult(items=dl.collect(work_dir))
+
+    qmod.DOWNLOADERS["instagram"] = fake_public
+    t_pub = storage.create_task(222, 222, "https://instagram.com/p/PUB", "h_PUB",
+                                "instagram", "post", "someone")
+    await qmod.process(bot, t_pub)
+    row = storage.get_task(t_pub)
+    check("публичный пост скачан анонимно", row["status"] == "done" and row["account_id"] is None,
+          f"{row['status']} {row['account_id']}")
+    check("аккаунт даже не трогали", used_cookies == [None], f"{used_cookies}")
+
+    used_cookies.clear()
+
+    async def fake_gone(url, work_dir, cookies=None, timeout=300):
+        used_cookies.append(cookies)
+        raise dl.DownloadError(dl.E_NOT_FOUND, "404")
+
+    qmod.DOWNLOADERS["instagram"] = fake_gone
+    t_gone = storage.create_task(222, 222, "https://instagram.com/p/GONE", "h_GONE",
+                                 "instagram", "post", "someone")
+    await qmod.process(bot, t_gone)
+    check("удалённый пост: аккаунт не тратим", used_cookies == [None]
+          and storage.get_task(t_gone)["status"] == "failed", f"{used_cookies}")
+
     print("\n== Полный цикл задачи ==")
 
     async def fake_ok(url, work_dir, cookies=None, timeout=300):
+        if cookies is None:  # этот пост анонимно не отдаётся
+            raise dl.DownloadError(dl.E_LOGIN, "login required")
         make_files(work_dir, ["01_a.jpg", "02_b.jpg"])
         return dl.DownloadResult(items=dl.collect(work_dir))
 
@@ -237,6 +270,8 @@ async def main():
     calls = {"n": 0}
 
     async def fake_expired_once(url, work_dir, cookies=None, timeout=300):
+        if cookies is None:
+            raise dl.DownloadError(dl.E_LOGIN, "login required")
         calls["n"] += 1
         if calls["n"] == 1:
             raise dl.DownloadError(dl.E_AUTH_EXPIRED, "cookies are no longer valid")
@@ -303,6 +338,14 @@ async def main():
     check("задача не зависла", storage.get_task(t6)["status"] == "failed")
     check("юзеру сказали про отсутствие аккаунта",
           any("аккаунт" in m.lower() for m in bot.messages), f"{bot.messages}")
+    check("после rate limit анонимный режим на паузе", qmod._anon_paused_until > time.time())
+
+    qmod._anon_paused_until = 0.0
+    qmod.DOWNLOADERS["instagram"] = fake_public
+    t_pub2 = storage.create_task(222, 222, "https://instagram.com/p/PUB2", "h_PUB2",
+                                 "instagram", "post", "someone")
+    await qmod.process(bot, t_pub2)
+    check("пул пуст, а публичное качается", storage.get_task(t_pub2)["status"] == "done")
 
     print("\n== Твиттер без аккаунта ==")
 

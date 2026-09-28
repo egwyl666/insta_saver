@@ -10,6 +10,10 @@ Coming up: waiting queue for follow requests (stage 3) and the admin panel (stag
 - Picks up Instagram and Twitter links in any message, including several at once
 - Understands mirrors (vxtwitter, ddinstagram, etc.) and strips junk parameters
 - Instagram: posts, reels, stories, highlights — via gallery-dl, with yt-dlp as a fallback
+- Instagram without an account first: public posts and reels are fetched anonymously;
+  an account from the pool is used only when that fails (private profiles, 18+, stories).
+  After an anonymous rate limit the bot goes straight to accounts for 30 minutes.
+  Setting `instagram_anon_first` turns this off
 - Twitter: videos via yt-dlp, images via gallery-dl, no login required
 - Carousels are sent as albums, split into chunks of 10 files (Telegram's limit)
 - Cache: a repeated link is served instantly by `file_id`, without downloading again
@@ -46,7 +50,8 @@ installs the systemd units and enables weekly updates of yt-dlp and gallery-dl.
 
 ## Cookies
 
-Instagram needs at least one account in the pool; Twitter works without one.
+Public Instagram posts and Twitter work without an account. An Instagram account
+is needed for private profiles (the account must follow them), 18+ content and stories.
 
 1. In a desktop browser, log in to Instagram with a **throwaway** account (not your main one).
 2. Export cookies for instagram.com in Netscape format with an extension such as
