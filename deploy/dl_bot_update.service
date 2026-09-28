@@ -1,0 +1,9 @@
+[Unit]
+Description=dl_bot - update yt-dlp and gallery-dl
+
+[Service]
+Type=oneshot
+User=REPLACE_USER
+WorkingDirectory=REPLACE_HOME/dl_bot
+ExecStart=REPLACE_HOME/dl_bot/.venv/bin/pip install -q --upgrade yt-dlp gallery-dl
+ExecStartPost=/bin/systemctl restart dl_bot.service

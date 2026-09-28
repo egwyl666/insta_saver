@@ -1,0 +1,17 @@
+# секреты
+.env
+
+# рабочие данные: база, зашифрованные cookies, бэкапы, временные файлы
+data/*.db
+data/*.db-*
+data/cookies/*
+data/backups/*
+tmp/*
+!data/cookies/.gitkeep
+!data/backups/.gitkeep
+!tmp/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+.venv/
